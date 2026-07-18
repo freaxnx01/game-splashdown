@@ -5,3 +5,6 @@ Thumbs.db
 # Editors
 .vscode/
 .idea/
+
+# Worktrees
+.worktrees/
