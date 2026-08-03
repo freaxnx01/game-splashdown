@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Splashdown! — Wasserrutschen-Rennen</title>
+<title>Splashdown! - Wasserrutschen-Rennen</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
@@ -176,7 +176,24 @@ function shapeSegment(seg, z0){
 
 // ---------- items ----------
 const itemPools = {};
-function makeBerry(){ const m = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 10), toon(0xf295ab)); return m; }
+function makeHazelnut(){
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 10), toon(0x8a5a34));
+  m.scale.set(1, 1.15, 0.9); return m;
+}
+function makeHerring(){
+  const grp = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 10), toon(0x9fb8c8));
+  body.scale.set(1.6, 0.75, 0.75);
+  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.6, 8), toon(0x7d97a8));
+  tail.rotation.z = Math.PI/2; tail.position.x = -0.9;
+  grp.add(body, tail); return grp;
+}
+function makeStrawberry(){
+  const grp = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 10), toon(0xd9435a)); body.scale.set(1, 1.25, 1);
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.35, 8), toon(0x5a9c4a)); cap.position.y = 0.62;
+  grp.add(body, cap); return grp;
+}
 function makeAcorn(){
   const grp = new THREE.Group();
   const body = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 10), toon(0xe8b64c)); body.scale.y = 1.2;
@@ -204,7 +221,9 @@ function makeBoost(){
   const m = new THREE.Mesh(new THREE.RingGeometry(0.8, 2.0, 20), new THREE.MeshBasicMaterial({color:0x7fe0d0, transparent:true, opacity:0.85, side:THREE.DoubleSide}));
   m.rotation.x = -Math.PI/2; return m;
 }
-const makers = {berry:makeBerry, acorn:makeAcorn, rock:makeRock, log:makeLog, ramp:makeRamp, boost:makeBoost};
+const makers = {hazelnut:makeHazelnut, herring:makeHerring, strawberry:makeStrawberry, acorn:makeAcorn, rock:makeRock, log:makeLog, ramp:makeRamp, boost:makeBoost};
+const COMMON_ITEM_BY_CHAR = {squirrel:'hazelnut', penguin:'herring', axolotl:'strawberry'};
+const COMMON_ITEM_TYPES = new Set(['hazelnut', 'herring', 'strawberry']);
 function getItem(type){
   const pool = itemPools[type] || (itemPools[type] = []);
   let it = pool.find(o => !o.active);
@@ -280,7 +299,7 @@ function populateSegment(seg, z0){
     const lz = z0 + 8 + Math.random()*30, l0 = (Math.random()*2-1)*6;
     for(let i=0; i<n; i++){
       const z = lz + i*3.2, l = l0 + Math.sin(i*0.7)*2.5;
-      const it = getItem(Math.random() < 0.08 ? 'acorn' : 'berry');
+      const it = getItem(Math.random() < 0.08 ? 'acorn' : COMMON_ITEM_BY_CHAR[charKind]);
       it.z = z; it.l = l; it.r = 1.5;
       it.mesh.position.set(centerX(z)+l, surfaceY(z, l)+1.0, z);
       seg.items.push(it);
@@ -310,6 +329,7 @@ function populateSegment(seg, z0){
   if(Math.random() < 0.3){
     const z = z0 + 10 + Math.random()*(SEG_LEN-20), l = (Math.random()*2-1)*6;
     const it = getItem('boost');
+    it.mesh.material.color.setHSL(Math.random(), 0.6, 0.68);
     it.z = z; it.l = l; it.r = 2.2;
     it.mesh.position.set(centerX(z)+l, baseY(z)+WATER_Y+0.1, z);
     seg.items.push(it);
@@ -404,7 +424,7 @@ function buildAxolotl(){
   const cheek1 = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), new THREE.MeshBasicMaterial({color:0xf98fa8}));
   cheek1.position.set(-0.45, 0.68, 1.5);
   const cheek2 = cheek1.clone(); cheek2.position.x = 0.45;
-  // gills — 3 per side
+  // gills - 3 per side
   const gills = new THREE.Group();
   const gillGeo = new THREE.ConeGeometry(0.13, 0.62, 8);
   for(const side of [-1, 1]){
@@ -475,19 +495,23 @@ scene.add(playerGroup);
 const splashes = [];
 const splashMat = new THREE.MeshBasicMaterial({color:0xd8f2fa, transparent:true, opacity:0.85});
 for(let i=0; i<40; i++){
-  const m = new THREE.Mesh(new THREE.SphereGeometry(0.14, 6, 5), splashMat);
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.14, 6, 5), splashMat.clone());
   m.visible = false; scene.add(m);
   splashes.push({m, vx:0, vy:0, vz:0, life:0});
 }
 let splashIdx = 0;
-function splash(x, y, z, n, spd){
+const JUMP_SPLASH_COLOR_BY_CHAR = {squirrel:0x6b4423, penguin:0x000000, axolotl:0xf28fc0};
+function splash(x, y, z, n, spd, color=0xd8f2fa){
   for(let i=0; i<n; i++){
     const s = splashes[splashIdx++ % splashes.length];
     s.m.visible = true; s.m.position.set(x, y, z);
+    s.m.material.color.set(color);
     s.vx = (Math.random()-0.5)*spd; s.vy = Math.random()*spd*0.9 + 1; s.vz = (Math.random()-0.5)*spd;
     s.life = 0.5 + Math.random()*0.3;
     s.m.scale.setScalar(0.7 + Math.random()*0.8);
   }
+}
+}
 }
 
 // ---------- audio ----------
@@ -690,7 +714,7 @@ function tick(){
     if(P.y <= surfY){
       P.y = surfY; P.air = false; P.vy = 0;
       charMesh.rotation.set(0, 0, 0);
-      splash(centerX(P.z)+P.l, P.y+0.2, P.z, 12, 5);
+      splash(centerX(P.z)+P.l, P.y+0.2, P.z, 12, 5, JUMP_SPLASH_COLOR_BY_CHAR[charKind]);
       if(trick){
         if(trick.prog >= 0.85){
           trickCombo++;
@@ -727,7 +751,7 @@ function tick(){
       if(dz < -3 || dz > 3) continue;
       const dx = Math.abs((centerX(it.z)+it.l) - (centerX(P.z)+P.l));
       if(dx > it.r || Math.abs(dz) > it.r) continue;
-      if(it.type === 'berry' && !P.air){ it.taken = true; it.mesh.visible = false; score += 10; popup('+10'); sfx.berry(); }
+      if(COMMON_ITEM_TYPES.has(it.type) && !P.air){ it.taken = true; it.mesh.visible = false; score += 10; popup('+10'); sfx.berry(); }
       else if(it.type === 'acorn' && !P.air){ it.taken = true; it.mesh.visible = false; score += 50; popup('Goldene Eichel +50', 'gold'); sfx.acorn(); }
       else if(it.type === 'boost' && !P.air){ it.taken = true; it.mesh.visible = false; P.v += 7; popup('Turbo!', 'blue'); sfx.boost(); splash(centerX(P.z)+P.l, P.y, P.z, 8, 6); }
       else if(it.type === 'ramp' && !P.air){
@@ -802,7 +826,7 @@ function tick(){
   for(const seg of segments){
     for(const it of seg.items){
       if(!it.active || it.taken) continue;
-      if(it.type === 'berry' || it.type === 'acorn'){ it.mesh.rotation.y += dt*2; it.mesh.position.y = surfaceY(it.z, it.l)+1.0 + Math.sin(animT*3 + it.z)*0.15; }
+      if(COMMON_ITEM_TYPES.has(it.type) || it.type === 'acorn'){ it.mesh.rotation.y += dt*2; it.mesh.position.y = surfaceY(it.z, it.l)+1.0 + Math.sin(animT*3 + it.z)*0.15; }
       if(it.type === 'boost'){ it.mesh.rotation.z += dt*1.5; const s2 = 1 + Math.sin(animT*5)*0.08; it.mesh.scale.setScalar(s2); }
     }
   }
