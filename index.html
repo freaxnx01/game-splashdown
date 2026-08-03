@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Splashdown! - Wasserrutschen-Rennen</title>
+<title>Splashdown! — Wasserrutschen-Rennen</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
@@ -424,7 +424,7 @@ function buildAxolotl(){
   const cheek1 = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), new THREE.MeshBasicMaterial({color:0xf98fa8}));
   cheek1.position.set(-0.45, 0.68, 1.5);
   const cheek2 = cheek1.clone(); cheek2.position.x = 0.45;
-  // gills - 3 per side
+  // gills — 3 per side
   const gills = new THREE.Group();
   const gillGeo = new THREE.ConeGeometry(0.13, 0.62, 8);
   for(const side of [-1, 1]){
@@ -510,8 +510,6 @@ function splash(x, y, z, n, spd, color=0xd8f2fa){
     s.life = 0.5 + Math.random()*0.3;
     s.m.scale.setScalar(0.7 + Math.random()*0.8);
   }
-}
-}
 }
 
 // ---------- audio ----------
