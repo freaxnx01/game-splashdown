@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - `RAMP_COLOR_BY_CHAR` values must be exactly `{squirrel:0x6b4423, penguin:0x000000, axolotl:0xf28fc0}` — identical to `JUMP_SPLASH_COLOR_BY_CHAR` (spec: "Colors").
-- Side-mesh color is always derived as `new THREE.Color(mainColor).offsetHSL(0, 0, -0.12)` — never a second hardcoded color table (spec: "Side-mesh shading").
+- Side-mesh color is always derived as `new THREE.Color(mainColor).lerp(new THREE.Color(0x808080), 0.18)` — a fixed-percentage blend toward mid-gray, not a directional HSL lightness offset. **Revised 2026-08-04:** the original `offsetHSL(0, 0, -0.12)` formula was shipped in PR #6 and found broken in manual review — it clamps to a no-op on penguin's pure black (`0x000000`, lightness already 0), so the side panels came out identical to the plank. The gray-blend formula produces a visible tonal shift for every plank color, including black (spec: "Side-mesh shading").
 - Ramp color must be (re-)applied every time a ramp spawns in `populateSegment()`, not only at mesh creation in `makeRamp()` — required to fix pool-staleness across character restarts (spec: "Implementation approach").
 - No change to ramp physics, collision, sizing, or positioning (spec: "Non-goals").
 - No change to `JUMP_SPLASH_COLOR_BY_CHAR` or any other existing per-character theming (spec: "Non-goals").
@@ -125,7 +125,7 @@ with:
     const z = z0 + 15 + Math.random()*(SEG_LEN-30), l = (Math.random()*2-1)*5;
     const it = getItem('ramp');
     const mainColor = RAMP_COLOR_BY_CHAR[charKind];
-    const sideColor = new THREE.Color(mainColor).offsetHSL(0, 0, -0.12);
+    const sideColor = new THREE.Color(mainColor).lerp(new THREE.Color(0x808080), 0.18);
     it.mesh.userData.plank.material.color.set(mainColor);
     it.mesh.userData.sides.forEach(s => s.material.color.set(sideColor));
     it.z = z; it.l = l; it.r = 3.0;
@@ -144,9 +144,9 @@ Expected: no output, exit code 0.
 
 Open `index.html` in a browser (e.g. `python3 -m http.server` from the repo root, then visit `http://localhost:8000/`). For each of the three characters:
 
-1. Start a run as Mokus (squirrel). Play until a ramp spawns. Confirm the plank is brown/wooden (`#6b4423`) and the two side panels are a visibly darker brown.
-2. Return to the character select / restart, start a run as Tux (penguin). Confirm ramps are black, with visibly darker-black sides.
-3. Restart as Axolotl. Confirm ramps are pink (`#f28fc0`), matching the jump-splash pink, with darker-pink sides.
+1. Start a run as Mokus (squirrel). Play until a ramp spawns. Confirm the plank is brown/wooden (`#6b4423`) and the two side panels are a visibly distinct lighter brown (`#6f4f34`).
+2. Return to the character select / restart, start a run as Tux (penguin). Confirm ramps are black, with visibly distinct dark-gray sides (`#171717`) — **specifically check this one**: the previous formula silently failed to show any plank/side contrast for penguin, so this is the regression case to verify closely.
+3. Restart as Axolotl. Confirm ramps are pink (`#f28fc0`), matching the jump-splash pink, with visibly darker-pink sides (`#dd8cb4`).
 
 Expected: each character's ramp color is visually distinct and matches the character, in all three runs — including the second and third runs, which reuse pooled ramp meshes from the first run (this is the pool-staleness check: if colors from an earlier character "stick," Task 1's `userData` wiring or Task 2's recolor call has a bug).
 

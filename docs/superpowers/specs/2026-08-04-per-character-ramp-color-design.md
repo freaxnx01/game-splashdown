@@ -34,14 +34,29 @@ can drift out of sync.
 
 ## Side-mesh shading
 
-The ramp is a `THREE.Group` of 3 meshes: a main plank and two side meshes. Today the
-side color (`0xe8a8bf`) is a fixed ~12% HSL-lightness darkening of the plank color
-(`0xf7c8d8`). Preserve that relationship generically instead of hardcoding a second
-color per character:
+**Revised 2026-08-04, post-review of PR #6:** the original `offsetHSL(0, 0, -0.12)`
+approach is broken for penguin's black (`0x000000`). `THREE.Color.setHSL` clamps
+lightness to `[0, 1]`, so `0 - 0.12` clamps straight back to `0` — the side panels come
+out identical to the plank, silently failing to darken. This was caught in manual review
+of the shipped PR, not before — the fix below replaces the lightness-offset approach
+entirely, since no fixed *directional* offset (darker or lighter) can work at both ends
+of the lightness range.
+
+The ramp is a `THREE.Group` of 3 meshes: a main plank and two side meshes. Instead of a
+directional HSL offset, blend the plank color a fixed 18% toward mid-gray
+(`0x808080`). This gives a visible tonal shift for every plank color, including black
+(which lightens toward dark gray) and light colors (which darken toward gray) — the
+old "always darker" framing doesn't hold at the extremes, but "visibly distinct from
+the plank" does, and that's the actual requirement:
 
 ```js
-const sideColor = new THREE.Color(mainColor).offsetHSL(0, 0, -0.12);
+const sideColor = new THREE.Color(mainColor).lerp(new THREE.Color(0x808080), 0.18);
 ```
+
+Verified output per character: squirrel `0x6b4423` → `0x6f4f34` (subtly lighter),
+penguin `0x000000` → `0x171717` (dark gray, clearly distinct from pure black),
+axolotl `0xf28fc0` → `0xdd8cb4` (darker pink) — all three now show visible plank/side
+contrast, unlike the old formula's silent no-op on penguin.
 
 ## Implementation approach
 
@@ -77,7 +92,7 @@ if(Math.random() < 0.45){
   const z = z0 + 15 + Math.random()*(SEG_LEN-30), l = (Math.random()*2-1)*5;
   const it = getItem('ramp');
   const mainColor = RAMP_COLOR_BY_CHAR[charKind];
-  const sideColor = new THREE.Color(mainColor).offsetHSL(0, 0, -0.12);
+  const sideColor = new THREE.Color(mainColor).lerp(new THREE.Color(0x808080), 0.18);
   it.mesh.userData.plank.material.color.set(mainColor);
   it.mesh.userData.sides.forEach(s => s.material.color.set(sideColor));
   it.z = z; it.l = l; it.r = 3.0;
