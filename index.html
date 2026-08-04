@@ -184,10 +184,14 @@ function makeHazelnut(){
 function makeHerring(){
   const grp = new THREE.Group();
   const body = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 10), toon(0x9fb8c8));
-  body.scale.set(1.6, 0.75, 0.75);
-  const tail = new THREE.Mesh(new THREE.ConeGeometry(0.4, 0.6, 8), toon(0x7d97a8));
-  tail.rotation.z = Math.PI/2; tail.position.x = -0.9;
-  grp.add(body, tail); return grp;
+  body.scale.set(1.9, 0.62, 0.62);
+  const tailGeo = new THREE.ConeGeometry(0.32, 0.55, 8);
+  const tailMat = toon(0x7d97a8);
+  const tail1 = new THREE.Mesh(tailGeo, tailMat);
+  tail1.rotation.z = Math.PI/2; tail1.rotation.y = 0.35; tail1.position.set(-0.95, 0, 0.15);
+  const tail2 = new THREE.Mesh(tailGeo, tailMat);
+  tail2.rotation.z = Math.PI/2; tail2.rotation.y = -0.35; tail2.position.set(-0.95, 0, -0.15);
+  grp.add(body, tail1, tail2); return grp;
 }
 function makeStrawberry(){
   const grp = new THREE.Group();
@@ -199,6 +203,24 @@ function makeAcorn(){
   const grp = new THREE.Group();
   const body = new THREE.Mesh(new THREE.SphereGeometry(0.55, 12, 10), toon(0xe8b64c)); body.scale.y = 1.2;
   const cap = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.5, 10), toon(0xc08b3f)); cap.position.y = 0.6;
+  grp.add(body, cap); return grp;
+}
+function makeGoldenFish(){
+  const grp = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.45, 12, 10), toon(0xe8b64c));
+  body.scale.set(1.9, 0.62, 0.62);
+  const tailGeo = new THREE.ConeGeometry(0.32, 0.55, 8);
+  const tailMat = toon(0xc08b3f);
+  const tail1 = new THREE.Mesh(tailGeo, tailMat);
+  tail1.rotation.z = Math.PI/2; tail1.rotation.y = 0.35; tail1.position.set(-0.95, 0, 0.15);
+  const tail2 = new THREE.Mesh(tailGeo, tailMat);
+  tail2.rotation.z = Math.PI/2; tail2.rotation.y = -0.35; tail2.position.set(-0.95, 0, -0.15);
+  grp.add(body, tail1, tail2); return grp;
+}
+function makeGoldenStrawberry(){
+  const grp = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 10), toon(0xe8b64c)); body.scale.set(1, 1.25, 1);
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.35, 8), toon(0xc08b3f)); cap.position.y = 0.62;
   grp.add(body, cap); return grp;
 }
 function makeRock(){
@@ -222,9 +244,12 @@ function makeBoost(){
   const m = new THREE.Mesh(new THREE.RingGeometry(0.8, 2.0, 20), new THREE.MeshBasicMaterial({color:0x7fe0d0, transparent:true, opacity:0.85, side:THREE.DoubleSide}));
   m.rotation.x = -Math.PI/2; return m;
 }
-const makers = {hazelnut:makeHazelnut, herring:makeHerring, strawberry:makeStrawberry, acorn:makeAcorn, rock:makeRock, log:makeLog, ramp:makeRamp, boost:makeBoost};
+const makers = {hazelnut:makeHazelnut, herring:makeHerring, strawberry:makeStrawberry, acorn:makeAcorn, goldenFish:makeGoldenFish, goldenStrawberry:makeGoldenStrawberry, rock:makeRock, log:makeLog, ramp:makeRamp, boost:makeBoost};
 const COMMON_ITEM_BY_CHAR = {squirrel:'hazelnut', penguin:'herring', axolotl:'strawberry'};
 const COMMON_ITEM_TYPES = new Set(['hazelnut', 'herring', 'strawberry']);
+const GOLDEN_ITEM_BY_CHAR = {squirrel:'acorn', penguin:'goldenFish', axolotl:'goldenStrawberry'};
+const GOLDEN_POPUP_BY_CHAR = {squirrel:'Goldene Eichel +50', penguin:'Goldener Fisch +50', axolotl:'Goldene Erdbeere +50'};
+const GOLDEN_ITEM_TYPES = new Set(['acorn', 'goldenFish', 'goldenStrawberry']);
 function getItem(type){
   const pool = itemPools[type] || (itemPools[type] = []);
   let it = pool.find(o => !o.active);
@@ -300,7 +325,7 @@ function populateSegment(seg, z0){
     const lz = z0 + 8 + Math.random()*30, l0 = (Math.random()*2-1)*6;
     for(let i=0; i<n; i++){
       const z = lz + i*3.2, l = l0 + Math.sin(i*0.7)*2.5;
-      const it = getItem(Math.random() < 0.08 ? 'acorn' : COMMON_ITEM_BY_CHAR[charKind]);
+      const it = getItem(Math.random() < 0.08 ? GOLDEN_ITEM_BY_CHAR[charKind] : COMMON_ITEM_BY_CHAR[charKind]);
       it.z = z; it.l = l; it.r = 1.5;
       it.mesh.position.set(centerX(z)+l, surfaceY(z, l)+1.0, z);
       seg.items.push(it);
@@ -751,7 +776,7 @@ function tick(){
       const dx = Math.abs((centerX(it.z)+it.l) - (centerX(P.z)+P.l));
       if(dx > it.r || Math.abs(dz) > it.r) continue;
       if(COMMON_ITEM_TYPES.has(it.type) && !P.air){ it.taken = true; it.mesh.visible = false; score += 10; popup('+10'); sfx.berry(); }
-      else if(it.type === 'acorn' && !P.air){ it.taken = true; it.mesh.visible = false; score += 50; popup('Goldene Eichel +50', 'gold'); sfx.acorn(); }
+      else if(GOLDEN_ITEM_TYPES.has(it.type) && !P.air){ it.taken = true; it.mesh.visible = false; score += 50; popup(GOLDEN_POPUP_BY_CHAR[charKind], 'gold'); sfx.acorn(); }
       else if(it.type === 'boost' && !P.air){ it.taken = true; it.mesh.visible = false; P.v += 7; popup('Turbo!', 'blue'); sfx.boost(); splash(centerX(P.z)+P.l, P.y, P.z, 8, 6); }
       else if(it.type === 'ramp' && !P.air){
         it.taken = true;
@@ -825,7 +850,7 @@ function tick(){
   for(const seg of segments){
     for(const it of seg.items){
       if(!it.active || it.taken) continue;
-      if(COMMON_ITEM_TYPES.has(it.type) || it.type === 'acorn'){ it.mesh.rotation.y += dt*2; it.mesh.position.y = surfaceY(it.z, it.l)+1.0 + Math.sin(animT*3 + it.z)*0.15; }
+      if(COMMON_ITEM_TYPES.has(it.type) || GOLDEN_ITEM_TYPES.has(it.type)){ it.mesh.rotation.y += dt*2; it.mesh.position.y = surfaceY(it.z, it.l)+1.0 + Math.sin(animT*3 + it.z)*0.15; }
       if(it.type === 'boost'){ it.mesh.rotation.z += dt*1.5; const s2 = 1 + Math.sin(animT*5)*0.08; it.mesh.scale.setScalar(s2); }
     }
   }
